@@ -160,6 +160,7 @@ class BookingService:
 
         """)
 
+<<<<<<< HEAD
     def approve_booking(self, booking_id, admin_id):
 
         self.db.execute("""
@@ -204,4 +205,55 @@ class BookingService:
 
             WHERE id=?
 
+=======
+    def get_pending_bookings(self):
+        return self.db.fetchall("""
+            SELECT
+                bookings.id,
+                users.fullname,
+                campuses.name,
+                resources.name,
+                bookings.booking_date,
+                bookings.start_time,
+                bookings.end_time,
+                bookings.status
+            FROM bookings
+            JOIN users
+                ON bookings.lecturer_id = users.id
+            JOIN resources
+                ON bookings.resource_id = resources.id
+            JOIN campuses
+                ON resources.campus_id = campuses.id
+            WHERE bookings.status='Pending'
+            ORDER BY bookings.booking_date,
+                     bookings.start_time
+        """)
+
+    def approve_booking(self, booking_id, admin_id):
+        self.db.execute("""
+            UPDATE bookings
+            SET
+                status='Approved',
+                approved_by=?
+            WHERE id=?
+        """, (admin_id, booking_id))
+
+        self.db.execute("""
+            UPDATE resources
+            SET status='Booked'
+            WHERE id=(
+                SELECT resource_id
+                FROM bookings
+                WHERE id=?
+            )
+        """, (booking_id,))
+
+    def reject_booking(self, booking_id, admin_id):
+        self.db.execute("""
+            UPDATE bookings
+            SET
+                status='Rejected',
+                approved_by=?
+            WHERE id=?
+>>>>>>> aa24f26 (fucntioning App)
         """, (admin_id, booking_id))
