@@ -158,3 +158,14 @@ class ResourceService:
             ORDER BY name
 
         """, (campus_id,))
+
+    def get_available_resources_by_campus(self, campus_id):
+        return self.db.fetchall("""
+            SELECT
+                id,
+                name
+            FROM resources
+            WHERE campus_id=?
+            AND status='Available'
+            ORDER BY name
+        """, (campus_id,))

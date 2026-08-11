@@ -7,10 +7,40 @@ class AuthService:
     def __init__(self):
         self.db = Database()
 
-    def register(self, fullname, email, password, role):
+    # ==========================================================
+    # GET CAMPUSES
+    # ==========================================================
+
+    def get_campuses(self):
+
+        return self.db.fetchall("""
+            SELECT
+                id,
+                name
+            FROM campuses
+            ORDER BY name
+        """)
+
+    # ==========================================================
+    # REGISTER
+    # ==========================================================
+
+    def register(
+            self,
+            fullname,
+            email,
+            password,
+            role,
+            campus_id=None
+    ):
 
         fullname = fullname.strip()
         email = email.strip().lower()
+        role = role.strip()
+
+        # =========================
+        # VALIDATION
+        # =========================
 
         if not fullname:
             return False, "Full name is required."
@@ -21,38 +51,100 @@ class AuthService:
         if not password:
             return False, "Password is required."
 
+        if not role:
+            return False, "Role is required."
+
+        # =========================
+        # CAMPUS VALIDATION
+        # =========================
+
+        if role != "System Operator":
+
+            if campus_id is None:
+                return False, "Campus selection is required."
+
+            campus = self.db.fetchone(
+                """
+                SELECT id
+                FROM campuses
+                WHERE id=?
+                """,
+                (campus_id,)
+            )
+
+            if not campus:
+                return False, "Selected campus does not exist."
+
+        # =========================
+        # CHECK EMAIL
+        # =========================
+
         existing = self.db.fetchone(
-            "SELECT id FROM users WHERE email=?",
+            """
+            SELECT id
+            FROM users
+            WHERE email=?
+            """,
             (email,)
         )
 
         if existing:
+
             return False, "Email already exists."
+
+        # =========================
+        # HASH PASSWORD
+        # =========================
 
         hashed = User.hash_password(password)
 
+        # =========================
+        # INSERT USER
+        # =========================
+
         self.db.execute(
             """
-            INSERT INTO users(fullname,email,password,role)
-            VALUES(?,?,?,?)
+            INSERT INTO users(
+                fullname,
+                email,
+                password,
+                role,
+                campus_id
+            )
+            VALUES(?,?,?,?,?)
             """,
             (
                 fullname,
                 email,
                 hashed,
-                role
+                role,
+                campus_id
             )
         )
 
         return True, "Registration successful."
 
+    # ==========================================================
+    # LOGIN
+    # ==========================================================
+
     def login(self, email, password):
 
         email = email.strip().lower()
 
+        if not email or not password:
+
+            return False, "Email and password are required."
+
         user = self.db.fetchone(
             """
-            SELECT *
+            SELECT
+                id,
+                fullname,
+                email,
+                password,
+                role,
+                campus_id
             FROM users
             WHERE email=?
             """,
@@ -60,9 +152,15 @@ class AuthService:
         )
 
         if not user:
+
             return False, "Invalid email or password."
 
-        if not User.verify_password(password, user[3]):
+        # Verify hashed password
+        if not User.verify_password(
+                password,
+                user[3]
+        ):
+
             return False, "Invalid email or password."
 
         return True, user
