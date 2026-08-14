@@ -1,24 +1,33 @@
 import customtkinter as ctk
-
 from CTkMessagebox import CTkMessagebox
 from tkcalendar import DateEntry
+from datetime import datetime
 
 from services.booking_service import BookingService
 
 
-TIME_SLOTS = [
+# =========================================================
+# BOOKING TIME RULES
+# =========================================================
+
+START_TIME_SLOTS = [
     "07:00",
     "08:00",
     "09:00",
     "10:00",
     "11:00",
     "12:00",
+    "13:00"
+]
+
+END_TIME_SLOTS = [
+    "08:00",
+    "09:00",
+    "10:00",
+    "11:00",
+    "12:00",
     "13:00",
-    "14:00",
-    "15:00",
-    "16:00",
-    "17:00",
-    "18:00"
+    "14:00"
 ]
 
 
@@ -31,75 +40,126 @@ class BookingFrame(ctk.CTkFrame):
         self.user = user
         self.service = BookingService()
 
-        # -----------------------------------------
+        # =====================================================
         # TITLE
-        # -----------------------------------------
+        # =====================================================
 
-        ctk.CTkLabel(
+        title = ctk.CTkLabel(
             self,
             text="Make a Booking",
             font=("Arial", 28, "bold")
-        ).pack(pady=20)
-
-        # -----------------------------------------
-        # FORM
-        # -----------------------------------------
-
-        form = ctk.CTkFrame(self)
-        form.pack(pady=10)
-
-        # -----------------------------------------
-        # CAMPUS
-        # -----------------------------------------
-
-        ctk.CTkLabel(
-            form,
-            text="Campus"
-        ).pack(pady=(10, 5))
-
-        campuses = self.service.get_campuses()
-
-        self.campus_map = {
-            campus[1]: campus[0]
-            for campus in campuses
-        }
-
-        campus_names = list(self.campus_map.keys())
-
-        self.campus_menu = ctk.CTkOptionMenu(
-            form,
-            values=campus_names if campus_names else ["No Campuses"],
-            command=self.load_resources
         )
 
-        self.campus_menu.pack(pady=5)
+        title.pack(
+            pady=(12, 5)
+        )
 
-        # -----------------------------------------
+        # =====================================================
+        # BOOKING RULES
+        # =====================================================
+
+        rules_frame = ctk.CTkFrame(
+            self,
+            corner_radius=10
+        )
+
+        rules_frame.pack(
+            fill="x",
+            padx=35,
+            pady=(5, 10)
+        )
+
+        ctk.CTkLabel(
+            rules_frame,
+            text="Booking Rules",
+            font=("Arial", 18, "bold")
+        ).pack(
+            anchor="w",
+            padx=15,
+            pady=(8, 3)
+        )
+
+        rules_text = (
+            "• No bookings are allowed on Saturdays or Sundays.\n"
+            "• Bookings must be made between 07:00 and 14:00.\n"
+            "• A lecturer can make a maximum of 2 bookings per day.\n"
+            "• Start time must be earlier than end time.\n"
+            "• A resource cannot be booked by two people at the same time.\n"
+            "• The booking date cannot be in the past.\n"
+            "• A booking purpose is required."
+        )
+
+        ctk.CTkLabel(
+            rules_frame,
+            text=rules_text,
+            justify="left",
+            anchor="w",
+            font=("Arial", 12)
+        ).pack(
+            anchor="w",
+            padx=15,
+            pady=(0, 8)
+        )
+
+        # =====================================================
+        # FORM
+        # =====================================================
+
+        form = ctk.CTkFrame(
+            self,
+            width=320
+        )
+
+        form.pack(
+            pady=5
+        )
+
+        # =====================================================
         # RESOURCE
-        # -----------------------------------------
+        # =====================================================
 
         ctk.CTkLabel(
             form,
             text="Resource"
-        ).pack(pady=(10, 5))
+        ).pack(
+            pady=(5, 3)
+        )
 
-        self.resource_map = {}
+        resources = self.service.get_resources()
+
+        self.resource_map = {
+            r[1]: r[0]
+            for r in resources
+        }
+
+        resource_names = list(
+            self.resource_map.keys()
+        )
 
         self.resource_menu = ctk.CTkOptionMenu(
             form,
-            values=["Select Campus First"]
+            values=(
+                resource_names
+                if resource_names
+                else ["No Resources"]
+            ),
+            width=300
         )
 
-        self.resource_menu.pack(pady=5)
+        self.resource_menu.pack(
+            pady=3
+        )
 
-        # -----------------------------------------
-        # DATE
-        # -----------------------------------------
+        # =====================================================
+        # BOOKING DATE
+        # =====================================================
 
         ctk.CTkLabel(
             form,
             text="Booking Date"
-        ).pack(pady=(10, 5))
+        ).pack(
+            pady=(5, 2)
+        )
 
         self.date_entry = DateEntry(
             form,
@@ -110,184 +170,102 @@ class BookingFrame(ctk.CTkFrame):
             date_pattern="yyyy-mm-dd"
         )
 
-        self.date_entry.pack(pady=5)
+        self.date_entry.pack(
+            pady=2
+        )
 
-        # -----------------------------------------
+        # =====================================================
         # START TIME
-        # -----------------------------------------
+        # =====================================================
 
         ctk.CTkLabel(
             form,
             text="Start Time"
-        ).pack(pady=(10, 5))
+        ).pack(
+            pady=(5, 2)
+        )
 
         self.start_time = ctk.CTkOptionMenu(
             form,
-            values=TIME_SLOTS
+            values=START_TIME_SLOTS,
+            width=300
         )
 
-        self.start_time.pack(pady=5)
+        self.start_time.pack(
+            pady=2
+        )
 
-        # -----------------------------------------
+        # =====================================================
         # END TIME
-        # -----------------------------------------
+        # =====================================================
 
         ctk.CTkLabel(
             form,
             text="End Time"
-        ).pack(pady=(10, 5))
+        ).pack(
+            pady=(5, 2)
+        )
 
         self.end_time = ctk.CTkOptionMenu(
             form,
-            values=TIME_SLOTS
+            values=END_TIME_SLOTS,
+            width=300
         )
 
-        self.end_time.pack(pady=5)
+        self.end_time.pack(
+            pady=2
+        )
 
-        # -----------------------------------------
+        # =====================================================
         # PURPOSE
-        # -----------------------------------------
+        # =====================================================
 
         ctk.CTkLabel(
             form,
-            text="Booking Purpose"
-        ).pack(pady=(10, 5))
+            text="Purpose"
+        ).pack(
+            pady=(5, 2)
+        )
 
         self.purpose = ctk.CTkTextbox(
             form,
-            width=350,
-            height=100
+            width=300,
+            height=65
         )
 
-        self.purpose.pack(pady=5)
+        self.purpose.pack(
+            pady=2
+        )
 
-        # -----------------------------------------
-        # SUBMIT
-        # -----------------------------------------
+        # =====================================================
+        # SUBMIT BUTTON
+        # =====================================================
 
-        ctk.CTkButton(
+        self.submit_button = ctk.CTkButton(
             form,
             text="Submit Booking",
+            width=300,
+            height=38,
             command=self.submit_booking
-        ).pack(pady=20)
-
-        campus_name = "Unknown"
-
-        for campus in self.service.db.fetchall(
-                "SELECT id, name FROM campuses"
-        ):
-            if campus[0] == self.user[5]:
-                campus_name = campus[1]
-                break
-
-        ctk.CTkLabel(
-            self,
-            text=f"Campus: {campus_name}",
-            font=("Arial", 16)
-        ).pack(pady=(0, 15))
-
-        # -----------------------------------------
-        # LOAD LECTURER CAMPUS
-        # -----------------------------------------
-
-        lecturer_campus_id = self.user[5]
-
-        if lecturer_campus_id:
-
-            for name, campus_id in self.campus_map.items():
-
-                if campus_id == lecturer_campus_id:
-
-                    self.campus_menu.set(name)
-
-                    self.load_resources(name)
-
-                    break
-
-    # =================================================
-    # LOAD RESOURCES
-    # =================================================
-
-    def load_resources(self, campus_name):
-
-        if campus_name not in self.campus_map:
-            return
-
-        campus_id = self.campus_map[campus_name]
-
-        # Make sure lecturer belongs to this campus
-        lecturer_campus_id = self.user[5]
-
-        if lecturer_campus_id != campus_id:
-
-            self.resource_map = {}
-
-            self.resource_menu.configure(
-                values=["Not Your Campus"]
-            )
-
-            self.resource_menu.set(
-                "Not Your Campus"
-            )
-
-            return
-
-        campus_id = self.user[5]
-
-        resources = self.service.get_resources(
-            campus_id
         )
 
-        self.resource_map = {
-            resource[1]: resource[0]
-            for resource in resources
-        }
-
-        resource_names = list(
-            self.resource_map.keys()
+        self.submit_button.pack(
+            pady=(10, 10)
         )
 
-        if resource_names:
-
-            self.resource_menu.configure(
-                values=resource_names
-            )
-
-            self.resource_menu.set(
-                resource_names[0]
-            )
-
-        else:
-
-            self.resource_menu.configure(
-                values=["No Resources Available"]
-            )
-
-            self.resource_menu.set(
-                "No Resources Available"
-            )
-
-    # =================================================
+    # =========================================================
     # SUBMIT BOOKING
-    # =================================================
+    # =========================================================
 
     def submit_booking(self):
 
         try:
 
-            campus_name = self.campus_menu.get()
+            print("========== BOOKING ==========")
 
-            if campus_name not in self.campus_map:
-
-                CTkMessagebox(
-                    title="Booking Error",
-                    message="Please select a valid campus.",
-                    icon="cancel"
-                )
-
-                return
-
-            campus_id = self.campus_map[campus_name]
+            # -------------------------------------------------
+            # RESOURCE
+            # -------------------------------------------------
 
             resource_name = self.resource_menu.get()
 
@@ -296,71 +274,188 @@ class BookingFrame(ctk.CTkFrame):
                 CTkMessagebox(
                     title="Booking Error",
                     message="Please select a valid resource.",
-                    icon="cancel"
+                    icon="warning"
                 )
 
                 return
+
+            # -------------------------------------------------
+            # USER
+            # -------------------------------------------------
+
+            lecturer_id = self.user[0]
+
+            # -------------------------------------------------
+            # RESOURCE ID
+            # -------------------------------------------------
 
             resource_id = self.resource_map[
                 resource_name
             ]
 
+            # -------------------------------------------------
+            # DATE
+            # -------------------------------------------------
+
             booking_date = self.date_entry.get()
 
-            start_time = self.start_time.get()
+            selected_date = datetime.strptime(
+                booking_date,
+                "%Y-%m-%d"
+            ).date()
 
+            today = datetime.now().date()
+
+            # -------------------------------------------------
+            # PAST DATE
+            # -------------------------------------------------
+
+            if selected_date < today:
+
+                CTkMessagebox(
+                    title="Invalid Date",
+                    message=(
+                        "You cannot make a booking "
+                        "for a past date."
+                    ),
+                    icon="warning"
+                )
+
+                return
+
+            # -------------------------------------------------
+            # WEEKEND
+            # -------------------------------------------------
+
+            if selected_date.weekday() >= 5:
+
+                CTkMessagebox(
+                    title="Weekend Booking",
+                    message=(
+                        "Bookings are not allowed on weekends.\n\n"
+                        "Please select a Monday to Friday."
+                    ),
+                    icon="warning"
+                )
+
+                return
+
+            # -------------------------------------------------
+            # TIMES
+            # -------------------------------------------------
+
+            start_time = self.start_time.get()
             end_time = self.end_time.get()
+
+            start = datetime.strptime(
+                start_time,
+                "%H:%M"
+            )
+
+            end = datetime.strptime(
+                end_time,
+                "%H:%M"
+            )
+
+            # -------------------------------------------------
+            # START MUST BE BEFORE END
+            # -------------------------------------------------
+
+            if start >= end:
+
+                CTkMessagebox(
+                    title="Invalid Time",
+                    message=(
+                        "Start time must be earlier "
+                        "than end time."
+                    ),
+                    icon="warning"
+                )
+
+                return
+
+            # -------------------------------------------------
+            # 14:00 CUTOFF
+            # -------------------------------------------------
+
+            cutoff = datetime.strptime(
+                "14:00",
+                "%H:%M"
+            )
+
+            if end > cutoff:
+
+                CTkMessagebox(
+                    title="Booking Time Restriction",
+                    message=(
+                        "Bookings cannot continue after 14:00.\n\n"
+                        "Please select an end time of 14:00 or earlier."
+                    ),
+                    icon="warning"
+                )
+
+                return
+
+            # -------------------------------------------------
+            # PURPOSE
+            # -------------------------------------------------
 
             purpose = self.purpose.get(
                 "1.0",
                 "end"
             ).strip()
 
-            # -------------------------------------
+            if not purpose:
+
+                CTkMessagebox(
+                    title="Missing Purpose",
+                    message="Please enter the purpose of the booking.",
+                    icon="warning"
+                )
+
+                return
+
+            # -------------------------------------------------
             # CREATE BOOKING
-            # -------------------------------------
+            # -------------------------------------------------
 
             success, message = self.service.create_booking(
+                lecturer_id,
+                resource_id,
+                booking_date,
+                start_time,
+                end_time,
+                purpose
+            )
 
-                lecturer_id=self.user[0],
+            # -------------------------------------------------
+            # RESULT
+            # -------------------------------------------------
 
-                campus_id=campus_id,
-
-                resource_id=resource_id,
-
-                booking_date=booking_date,
-
-                start_time=start_time,
-
-                end_time=end_time,
-
-                purpose=purpose
+            CTkMessagebox(
+                title="Booking Result",
+                message=message,
+                icon="check" if success else "warning"
             )
 
             if success:
-
-                CTkMessagebox(
-                    title="Booking Successful",
-                    message=message,
-                    icon="check"
-                )
 
                 self.purpose.delete(
                     "1.0",
                     "end"
                 )
 
-            else:
+        except ValueError:
 
-                CTkMessagebox(
-                    title="Booking Failed",
-                    message=message,
-                    icon="warning"
-                )
+            CTkMessagebox(
+                title="Invalid Input",
+                message="Please enter valid booking information.",
+                icon="warning"
+            )
 
         except Exception as e:
 
-            print("BOOKING ERROR:", e)
+            print("BOOKING EXCEPTION:", e)
 
             CTkMessagebox(
                 title="System Error",

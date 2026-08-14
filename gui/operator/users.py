@@ -1,150 +1,243 @@
 import customtkinter as ctk
 from tkinter import ttk
 from CTkMessagebox import CTkMessagebox
-from gui.operator.user_form import UserForm
 
-from services.user_service import UserService
+from db_manager import Database
 
 
-class UsersFrame(ctk.CTkFrame):
+class UserFrame(ctk.CTkFrame):
 
     def __init__(self, master, user):
         super().__init__(master)
 
-        self.service = UserService()
+        self.user = user
+        self.db = Database()
 
-        title = ctk.CTkLabel(
+        # ==============================
+        # TITLE
+        # ==============================
+
+        ctk.CTkLabel(
             self,
             text="User Management",
-            font=("Arial",28,"bold")
-        )
-        title.pack(pady=20)
+            font=("Arial", 28, "bold")
+        ).pack(pady=(20, 10))
+
+        # ==============================
+        # TOOLBAR
+        # ==============================
 
         toolbar = ctk.CTkFrame(self)
-        toolbar.pack(fill="x", padx=20)
-
-        self.search = ctk.CTkEntry(
-            toolbar,
-            placeholder_text="Search User..."
+        toolbar.pack(
+            fill="x",
+            padx=25,
+            pady=10
         )
-        self.search.pack(side="left", padx=5)
+
+        self.search_entry = ctk.CTkEntry(
+            toolbar,
+            width=300,
+            placeholder_text="Search name or email..."
+        )
+
+        self.search_entry.pack(
+            side="left",
+            padx=5,
+            pady=10
+        )
 
         ctk.CTkButton(
             toolbar,
             text="Search",
             command=self.search_users
-        ).pack(side="left")
+        ).pack(
+            side="left",
+            padx=5
+        )
 
         ctk.CTkButton(
             toolbar,
             text="Refresh",
             command=self.load_users
-        ).pack(side="left", padx=5)
+        ).pack(
+            side="left",
+            padx=5
+        )
 
         ctk.CTkButton(
             toolbar,
-            text="Add",
-            command=self.add_user
-        ).pack(side="right", padx=5)
-
-        ctk.CTkButton(
-            toolbar,
-            text="Edit",
-            command=self.edit_user
-        ).pack(side="right", padx=5)
-
-        ctk.CTkButton(
-            toolbar,
-            text="Delete",
+            text="Delete User",
             fg_color="red",
+            hover_color="#B22222",
             command=self.delete_user
-        ).pack(side="right", padx=5)
+        ).pack(
+            side="right",
+            padx=5
+        )
 
-        columns=(
+        # ==============================
+        # TABLE
+        # ==============================
+
+        columns = (
             "ID",
             "Full Name",
             "Email",
-            "Role"
+            "Role",
+            "Campus"
         )
 
-        self.table=ttk.Treeview(
+        self.table = ttk.Treeview(
             self,
             columns=columns,
             show="headings",
             height=18
         )
 
-        for col in columns:
-            self.table.heading(col,text=col)
-            self.table.column(col,width=220)
+        widths = {
+            "ID": 60,
+            "Full Name": 180,
+            "Email": 220,
+            "Role": 180,
+            "Campus": 150
+        }
+
+        for column in columns:
+
+            self.table.heading(
+                column,
+                text=column
+            )
+
+            self.table.column(
+                column,
+                width=widths[column],
+                anchor="center"
+            )
 
         self.table.pack(
             fill="both",
             expand=True,
-            padx=20,
+            padx=25,
             pady=20
         )
 
         self.load_users()
 
+    # ==============================
+    # LOAD USERS
+    # ==============================
+
     def load_users(self):
 
-        for row in self.table.get_children():
-            self.table.delete(row)
+        self.search_entry.delete(
+            0,
+            "end"
+        )
 
-        users=self.service.get_users()
+        self.refresh_table()
 
-        for user in users:
-            self.table.insert("", "end", values=user)
+    # ==============================
+    # SEARCH
+    # ==============================
 
     def search_users(self):
 
-        keyword=self.search.get()
+        keyword = self.search_entry.get().strip()
 
-        for row in self.table.get_children():
-            self.table.delete(row)
+        self.refresh_table(keyword)
 
-        users=self.service.search_users(keyword)
+    # ==============================
+    # REFRESH TABLE
+    # ==============================
+
+    def refresh_table(self, keyword=""):
+
+        for item in self.table.get_children():
+            self.table.delete(item)
+
+        keyword = f"%{keyword}%"
+
+        users = self.db.fetchall("""
+            SELECT
+                users.id,
+                users.fullname,
+                users.email,
+                users.role,
+                COALESCE(campuses.name, 'Not Assigned')
+
+            FROM users
+
+            LEFT JOIN campuses
+                ON users.campus_id = campuses.id
+
+            WHERE
+                users.fullname LIKE ?
+                OR users.email LIKE ?
+                OR users.role LIKE ?
+                OR COALESCE(campuses.name, '') LIKE ?
+
+            ORDER BY users.fullname
+        """, (
+            keyword,
+            keyword,
+            keyword,
+            keyword
+        ))
 
         for user in users:
-            self.table.insert("", "end", values=user)
 
-    def add_user(self):
+            self.table.insert(
+                "",
+                "end",
+                values=user
+            )
 
-        UserForm(
-            self,
-            self.load_users
-        )
+    # ==============================
+    # DELETE USER
+    # ==============================
 
-    def edit_user(self):
+    def delete_user(self):
 
         selected = self.table.selection()
 
         if not selected:
+
+            CTkMessagebox(
+                title="No Selection",
+                message="Please select a user.",
+                icon="warning"
+            )
+
             return
 
-        values = self.table.item(selected[0])["values"]
+        values = self.table.item(
+            selected[0]
+        )["values"]
 
-        UserForm(
-            self,
-            self.load_users,
-            values
-        )
+        user_id = values[0]
 
-    def delete_user(self):
+        # Prevent deleting yourself
 
-        selected=self.table.selection()
+        if user_id == self.user[0]:
 
-        if not selected:
+            CTkMessagebox(
+                title="Not Allowed",
+                message="You cannot delete your own account.",
+                icon="warning"
+            )
+
             return
 
-        values=self.table.item(selected[0])["values"]
+        self.db.execute("""
+            DELETE FROM users
+            WHERE id=?
+        """, (user_id,))
 
-        self.service.delete_user(values[0])
-
-        self.load_users()
+        self.refresh_table()
 
         CTkMessagebox(
             title="Success",
-            message="User deleted."
+            message="User deleted successfully.",
+            icon="check"
         )

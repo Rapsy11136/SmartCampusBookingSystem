@@ -4,21 +4,36 @@ import customtkinter as ctk
 class Sidebar(ctk.CTkFrame):
 
     def __init__(self, master, user):
-        super().__init__(master, width=220, corner_radius=0)
+
+        super().__init__(
+            master,
+            width=220,
+            corner_radius=0
+        )
 
         self.master = master
         self.user = user
 
-        self.pack(side="left", fill="y")
+        self.pack(
+            side="left",
+            fill="y"
+        )
+
         self.pack_propagate(False)
 
-        role = str(user[4]).lower()
+        role = str(user[4]).strip().lower()
+
+        # =====================================================
+        # HEADER
+        # =====================================================
 
         ctk.CTkLabel(
             self,
             text="Smart Campus",
             font=("Arial", 24, "bold")
-        ).pack(pady=(30, 10))
+        ).pack(
+            pady=(30, 10)
+        )
 
         ctk.CTkLabel(
             self,
@@ -30,37 +45,90 @@ class Sidebar(ctk.CTkFrame):
             self,
             text=user[4],
             font=("Arial", 12)
-        ).pack(pady=(0, 25))
+        ).pack(
+            pady=(0, 25)
+        )
 
-        # Dashboard (Everyone)
-        self.add_button("🏠 Dashboard", self.master.show_home)
+        # =====================================================
+        # DASHBOARD
+        # =====================================================
 
-        # Lecturer
+        self.add_button(
+            "🏠 Dashboard",
+            self.master.show_home
+        )
+
+        # =====================================================
+        # LECTURER
+        # =====================================================
+
         if role == "lecturer":
 
-            print("Creating Make Booking button")
-            self.add_button("📅 Make Booking", self.master.show_make_booking)
+            self.add_button(
+                "📅 Make Booking",
+                self.master.show_make_booking
+            )
 
-            print("Creating My Bookings button")
-            self.add_button("📖 My Bookings", self.master.show_my_bookings)
+            self.add_button(
+                "📖 My Bookings",
+                self.master.show_my_bookings
+            )
 
-            print("Lecturer buttons created")
+        # =====================================================
+        # CAMPUS ADMINISTRATOR
+        # =====================================================
 
-        # Campus Administrator
         elif role == "campus administrator":
 
-            self.add_button("📚 Resources", self.master.show_resources)
-            self.add_button("📅 Bookings", self.master.show_bookings)
-            self.add_button("✅ Approvals", self.master.show_approvals)
-            self.add_button("📊 Reports", self.master.show_reports)
+            self.add_button(
+                "📚 Resources",
+                self.master.show_resources
+            )
 
-        # System Operator
+            self.add_button(
+                "📅 Bookings",
+                self.master.show_bookings
+            )
+
+            self.add_button(
+                "✅ Approvals",
+                self.master.show_approvals
+            )
+
+            self.add_button(
+                "📊 Reports",
+                self.master.show_reports
+            )
+
+        # =====================================================
+        # SYSTEM OPERATOR
+        # =====================================================
+
         elif role == "system operator":
 
-            self.add_button("🏫 Campuses", self.master.show_campuses)
-            self.add_button("👥 Users", self.master.show_users)
-            self.add_button("📈 System Reports", self.master.show_reports)
-            self.add_button("✅ Approvals", self.master.show_approvals)
+            self.add_button(
+                "🏫 Campuses",
+                self.master.show_campuses
+            )
+
+            self.add_button(
+                "👥 Users",
+                self.master.show_users
+            )
+
+            self.add_button(
+                "📈 System Reports",
+                self.master.show_reports
+            )
+
+            self.add_button(
+                "✅ Approvals",
+                self.master.show_approvals
+            )
+
+        # =====================================================
+        # LOGOUT
+        # =====================================================
 
         ctk.CTkButton(
             self,
@@ -68,7 +136,16 @@ class Sidebar(ctk.CTkFrame):
             fg_color="red",
             hover_color="#B22222",
             command=self.master.logout
-        ).pack(side="bottom", fill="x", padx=15, pady=20)
+        ).pack(
+            side="bottom",
+            fill="x",
+            padx=15,
+            pady=20
+        )
+
+    # =========================================================
+    # BUTTON CREATOR
+    # =========================================================
 
     def add_button(self, text, command):
 
@@ -76,5 +153,8 @@ class Sidebar(ctk.CTkFrame):
             self,
             text=text,
             command=command
-        ).pack(fill="x", padx=15, pady=5)
-
+        ).pack(
+            fill="x",
+            padx=15,
+            pady=5
+        )

@@ -1,70 +1,85 @@
 import customtkinter as ctk
 from tkinter import ttk
 from CTkMessagebox import CTkMessagebox
-from gui.operator.campus_form import CampusForm
 
-from services.campus_service import CampusService
+from db_manager import Database
 
 
-class CampusesFrame(ctk.CTkFrame):
+class CampusFrame(ctk.CTkFrame):
 
     def __init__(self, master, user):
         super().__init__(master)
 
-        self.service = CampusService()
+        self.user = user
+        self.db = Database()
+
+        # ==============================
+        # TITLE
+        # ==============================
 
         ctk.CTkLabel(
             self,
             text="Campus Management",
             font=("Arial", 28, "bold")
-        ).pack(pady=20)
+        ).pack(pady=(20, 10))
 
-        toolbar = ctk.CTkFrame(self)
-        toolbar.pack(fill="x", padx=20)
+        # ==============================
+        # FORM
+        # ==============================
 
-        self.search = ctk.CTkEntry(
-            toolbar,
-            placeholder_text="Search Campus..."
+        form = ctk.CTkFrame(self)
+        form.pack(fill="x", padx=25, pady=10)
+
+        self.name_entry = ctk.CTkEntry(
+            form,
+            width=300,
+            placeholder_text="Campus Name"
         )
-        self.search.pack(side="left", padx=5)
+        self.name_entry.pack(
+            side="left",
+            padx=10,
+            pady=15
+        )
 
         ctk.CTkButton(
-            toolbar,
-            text="Search",
-            command=self.search_campuses
-        ).pack(side="left")
+            form,
+            text="Add Campus",
+            command=self.add_campus
+        ).pack(
+            side="left",
+            padx=5
+        )
 
         ctk.CTkButton(
-            toolbar,
+            form,
+            text="Delete Campus",
+            fg_color="red",
+            hover_color="#B22222",
+            command=self.delete_campus
+        ).pack(
+            side="left",
+            padx=5
+        )
+
+        ctk.CTkButton(
+            form,
             text="Refresh",
             command=self.load_campuses
-        ).pack(side="left", padx=5)
+        ).pack(
+            side="left",
+            padx=5
+        )
 
-        ctk.CTkButton(
-            toolbar,
-            text="Add",
-            command=self.add_campus
-        ).pack(side="right", padx=5)
-
-        ctk.CTkButton(
-            toolbar,
-            text="Edit",
-            command=self.edit_campus
-        ).pack(side="right", padx=5)
-
-        ctk.CTkButton(
-            toolbar,
-            text="Delete",
-            fg_color="red",
-            command=self.delete_campus
-        ).pack(side="right", padx=5)
+        # ==============================
+        # TABLE
+        # ==============================
 
         columns = (
             "ID",
-            "Campus",
-            "Max Hours",
-            "Open",
-            "Close"
+            "Campus Name",
+            "Resources",
+            "Users",
+            "Bookings"
         )
 
         self.table = ttk.Treeview(
@@ -74,73 +89,203 @@ class CampusesFrame(ctk.CTkFrame):
             height=18
         )
 
-        for col in columns:
-            self.table.heading(col, text=col)
-            self.table.column(col, width=180, anchor="center")
+        for column in columns:
+
+            self.table.heading(
+                column,
+                text=column
+            )
+
+            self.table.column(
+                column,
+                width=150,
+                anchor="center"
+            )
 
         self.table.pack(
             fill="both",
             expand=True,
-            padx=20,
+            padx=25,
             pady=20
         )
 
         self.load_campuses()
 
+    # ==============================
+    # LOAD CAMPUSES
+    # ==============================
+
     def load_campuses(self):
 
-        for row in self.table.get_children():
-            self.table.delete(row)
+        for item in self.table.get_children():
+            self.table.delete(item)
 
-        for campus in self.service.get_campuses():
-            self.table.insert("", "end", values=campus)
+        campuses = self.db.fetchall("""
+            SELECT
+                c.id,
+                c.name,
 
-    def search_campuses(self):
+                (
+                    SELECT COUNT(*)
+                    FROM resources r
+                    WHERE r.campus_id = c.id
+                ) AS resources,
 
-        for row in self.table.get_children():
-            self.table.delete(row)
+                (
+                    SELECT COUNT(*)
+                    FROM users u
+                    WHERE u.campus_id = c.id
+                ) AS users,
 
-        for campus in self.service.search_campuses(
-            self.search.get()
-        ):
-            self.table.insert("", "end", values=campus)
+                (
+                    SELECT COUNT(*)
+                    FROM bookings b
+                    JOIN resources r2
+                        ON b.resource_id = r2.id
+                    WHERE r2.campus_id = c.id
+                ) AS bookings
+
+            FROM campuses c
+
+            ORDER BY c.name
+        """)
+
+        for campus in campuses:
+
+            self.table.insert(
+                "",
+                "end",
+                values=campus
+            )
+
+    # ==============================
+    # ADD CAMPUS
+    # ==============================
 
     def add_campus(self):
 
-        CampusForm(
-            self,
-            self.load_campuses
-        )
+        name = self.name_entry.get().strip()
 
-    def edit_campus(self):
+        if not name:
 
-        selected = self.table.selection()
+            CTkMessagebox(
+                title="Validation Error",
+                message="Campus name is required.",
+                icon="warning"
+            )
 
-        if not selected:
             return
 
-        values = self.table.item(selected[0])["values"]
+        existing = self.db.fetchone("""
+            SELECT id
+            FROM campuses
+            WHERE LOWER(name)=LOWER(?)
+        """, (name,))
 
-        CampusForm(
-            self,
-            self.load_campuses,
-            values
+        if existing:
+
+            CTkMessagebox(
+                title="Duplicate Campus",
+                message="This campus already exists.",
+                icon="warning"
+            )
+
+            return
+
+        self.db.execute("""
+            INSERT INTO campuses(name)
+            VALUES(?)
+        """, (name,))
+
+        self.name_entry.delete(
+            0,
+            "end"
         )
+
+        self.load_campuses()
+
+        CTkMessagebox(
+            title="Success",
+            message="Campus added successfully.",
+            icon="check"
+        )
+
+    # ==============================
+    # DELETE CAMPUS
+    # ==============================
 
     def delete_campus(self):
 
         selected = self.table.selection()
 
         if not selected:
+
+            CTkMessagebox(
+                title="No Selection",
+                message="Please select a campus.",
+                icon="warning"
+            )
+
             return
 
-        campus = self.table.item(selected[0])["values"]
+        values = self.table.item(
+            selected[0]
+        )["values"]
 
-        self.service.delete_campus(campus[0])
+        campus_id = values[0]
+
+        resource_count = values[2]
+        user_count = values[3]
+        booking_count = values[4]
+
+        if resource_count > 0:
+
+            CTkMessagebox(
+                title="Cannot Delete",
+                message=(
+                    "This campus has resources assigned to it.\n"
+                    "Remove or reassign the resources first."
+                ),
+                icon="warning"
+            )
+
+            return
+
+        if user_count > 0:
+
+            CTkMessagebox(
+                title="Cannot Delete",
+                message=(
+                    "This campus has users assigned to it.\n"
+                    "Reassign the users first."
+                ),
+                icon="warning"
+            )
+
+            return
+
+        if booking_count > 0:
+
+            CTkMessagebox(
+                title="Cannot Delete",
+                message=(
+                    "This campus has booking records and "
+                    "cannot be deleted."
+                ),
+                icon="warning"
+            )
+
+            return
+
+        self.db.execute("""
+            DELETE FROM campuses
+            WHERE id=?
+        """, (campus_id,))
 
         self.load_campuses()
 
         CTkMessagebox(
             title="Success",
-            message="Campus deleted."
+            message="Campus deleted successfully.",
+            icon="check"
         )
